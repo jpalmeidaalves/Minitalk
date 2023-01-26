@@ -1,0 +1,137 @@
+SERVER
+1. Print pid - To print the pid of the current process:
+	getpid() function returns the pid of a process
+	ft_printf("%d\n", getpid());
+2. Install handlers for signals
+	sigaction(int sig, struct sigaction act, struct sigaction old) function
+		sig - signal to be handled
+		act - pointer to a structure of type sigaction 
+		old - pointer to a struct that stores the old act.
+	#IMPORTANT - Do not confund sigaction function with sigaction structure.
+		The structure it's a data type that store information on how to handle the signal.
+	Set the sa_handler OR sa_sigaction, a pointer to a handler function (or SIG_DFL or SIG_IGN)
+	Set sa_mask to block signals while the function is handling a signal to avoid data losses.
+	Declare a sigaction variable
+		struct sigaction act_hand1;	-- declaring the sigaction variable
+		struct sigaction act_hand2;	-- declaring the sigaction variable
+		act_hand1.sa_flags |= SA_SIGINFO;	-- activate the flag SA_SIGINFO to make sa_sigaction specifies the signal-handling and be able to 
+						   use the siginfo_t structure. It make possible get si_pid (stores the sending process PID).
+		act_hand1.sa_sigaction = &hand_func;  -- define sa_sigaction 
+		sigemptyset(&act_hand1.sa_mask);	-- clear element sa_mask 
+		sigaddset(&act_hand1.sa_mask, SIGUSR2);	-- add a signal to be blocked at the sa_mask set 
+		act_hand2.sa_flags |= SA_SIGINFO; //is formed by the bitwise OR of zero or more 
+		//When SA_SIGINFO flag is specified in act.sa_flags-signal handler address is passed 			  via the act.sa_sigaction field
+		act_hand2.sa_sigaction = &hand_func;
+		sigemptyset(&act_hand2.sa_mask);
+		sigaddset(&act_hand2.sa_mask, SIGUSR1);
+		if (sigaction(SIGUSR1, &act_hand1, NULL) == -1)	-- activate the handler for the specified signal
+			print_error();
+		if (sigaction(SIGUSR2, &act_hand2, NULL) == -1)
+			print_error();
+3. Put the program in a waiting state
+	Use an ifinite loop and the pause() function to paralize the program untill a signal arrives
+	while (1)
+		pause();
+	
+4. Signal-handling
+	void	hand_func(int signal, siginfo_t *info, void *ucontext)
+	ucontext isn't used in most uses of the siginfo_t structure
+		(void) ucontext;	
+	Declare 3 variables
+		1. static counter to keep track of the number of bits readed 
+		2. static unsigned char set to zero to be filled with the received bits
+		3. unsigned char to be used as mask that will be set to 1 if a signal and to zero if its another signal
+	Initialize variables
+		1. static int	readed_bits = 0;
+		2. static unsigned char	c = 0;
+		3. unsigned char	mask = (signal == SIGUSR1);	-- This line stands for:
+			   				[	if (signal == SIGUSR1)  ]
+							[		mask = 1;	     ] 
+							[	else             	     ]
+							[		mask = 0;	     ]
+	When all the are readed -- readed_bits == 8;
+		Call function to append char c to the global string to be printed.
+
+5. Global variable
+	Declare a global varible unsigned char* str to store the received characters.
+
+6. Function to append char to msg_str
+unsigned char	*ft_append_char(unsigned char *s, unsigned char *ch)
+{	
+	int	i;
+	int	len;
+	unsigned char	*str
+
+	i = 0; 
+	len = 0; 
+	if (s)
+		len = ft_strlen((char *)s);
+	str = (unsigned char *) malloc(len + 2);
+	if (!str)	
+		return (NULL);
+	if (s)
+	{
+		while (s[i])
+		{
+			str[i] = s[i];
+			i++;
+		}
+	}
+	str[i++] = ch;
+	str[i] = '\0';
+	return (str);
+}	
+
+CLIENT
+1. - Declare a variable to store the servers PID recevied as argument in the function call
+	int 	pid_serv;
+  1.1 - store the pid_server in the variable using atoi
+  	pid_serv = atoi(argv[1]);
+2. - Check usage, number of arguments
+	if (ac != 3)
+		[error_msg]
+3. Install handlers to send back an acknowledge message for every received signal from server
+	void	serv_handler(int sig)
+	{
+		if (sig = SIGUSR1)
+			ft_printf("\n+ Client: Message received +\n");		
+	}
+4. Send the string received as argument to pid_serv with the function:
+	send_str(argv[2], pid_serv)
+	
+	void send_str (char *str, int pid) 
+	//iterates over the string and send each char 
+	{
+		int	i;
+		
+		i = 0;
+		while (i < ft_strlen(str))
+			send_char(str[i++], pid);
+	}
+	
+	void	send_char(unsigned char c, int pid) 
+	//read one bit of char per iteration and send a signal depending on the bit
+	{
+		int	i;
+		char	mask;
+		
+		i = 8;
+		mask = 0b00000001;
+		while (i--)
+		{
+			if (c & mask)
+			{
+				if (kill(spid, SIGUSR1) = -1)
+					error_msg
+			}
+			else
+			{
+				if (kill(spid, SIGUSR1) = -1)
+					error_msg
+			}
+			mask <<=1;
+			uslep(100);
+		}
+	}
+
+
